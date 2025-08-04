@@ -6,6 +6,9 @@ import Home from './pages/Home';
 import Editor from './components/VideoEditor';
 import Features from './pages/Features';
 import Technologies from './pages/Technologies';
+import Profile from './pages/Profile';
+import Admin from './pages/Admin';
+import Help from './pages/Help';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './components/AuthCallback';
@@ -39,6 +42,9 @@ function App() {
                     <Route path="/technologies" element={<Technologies />} />
                     <Route path="/editor" element={<Editor />} />
                     <Route path="/Features" element={<Features />} />
+                    <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+                    <Route path="/admin" element={isAuthenticated ? <Admin /> : <Navigate to="/login" />} />
+                    <Route path="/help" element={<Help />} />
                   </Routes>
                 </main>
               </>

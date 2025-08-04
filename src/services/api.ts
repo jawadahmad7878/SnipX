@@ -177,6 +177,62 @@ export class ApiService {
     return this.request(`/videos/${videoId}/subtitles/${language}/json`);
   }
 
+  // Get video subtitles for player
+  static async getVideoSubtitles(videoId: string): Promise<SubtitleData[]> {
+    return this.request(`/videos/${videoId}/subtitles`);
+  }
+
+  // Profile management
+  static async getUserProfile() {
+    return this.request('/profile');
+  }
+
+  static async updateUserProfile(data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    preferences?: Record<string, any>;
+  }) {
+    return this.request('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  // Admin endpoints
+  static async getAdminStats() {
+    return this.request('/admin/stats');
+  }
+
+  static async getAllUsers() {
+    return this.request('/admin/users');
+  }
+
+  static async getAllVideos() {
+    return this.request('/admin/videos');
+  }
+
+  static async updateUserStatus(userId: string, status: string) {
+    return this.request(`/admin/users/${userId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+  }
+
+  // Support ticket
+  static async submitSupportTicket(data: {
+    name: string;
+    email: string;
+    subject: string;
+    description: string;
+    priority: string;
+    type: string;
+  }) {
+    return this.request('/support/tickets', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
   // Download processed video
   static async downloadVideo(videoId: string): Promise<Blob> {
     const token = this.getToken();

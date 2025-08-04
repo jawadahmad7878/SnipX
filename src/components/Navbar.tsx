@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X, Scissors } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface NavbarProps {
   mobileMenuOpen: boolean;
@@ -9,6 +10,7 @@ interface NavbarProps {
 
 const Navbar = ({ mobileMenuOpen, setMobileMenuOpen }: NavbarProps) => {
   const [scrolled, setScrolled] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -46,16 +48,37 @@ const Navbar = ({ mobileMenuOpen, setMobileMenuOpen }: NavbarProps) => {
               <Link to="/technologies" className="text-gray-700 hover:text-purple-600 transition-colors">Technologies</Link>
               <Link to="/editor" className="text-gray-700 hover:text-purple-600 transition-colors">Editor</Link>
               <Link to="/Features" className="text-gray-700 hover:text-purple-600 transition-colors">Features</Link>
+              <Link to="/help" className="text-gray-700 hover:text-purple-600 transition-colors">Help</Link>
+              {isAuthenticated && (
+                <>
+                  <Link to="/profile" className="text-gray-700 hover:text-purple-600 transition-colors">Profile</Link>
+                  {user?.email === 'admin@snipx.com' && (
+                    <Link to="/admin" className="text-gray-700 hover:text-purple-600 transition-colors">Admin</Link>
+                  )}
+                </>
+              )}
             </nav>
           </div>
           
           <div className="hidden md:flex items-center space-x-4">
-            <Link 
-              to="/login"
-              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
-            >
-              Get Started
-            </Link>
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-700">Welcome, {user?.firstName || 'User'}</span>
+                <button
+                  onClick={logout}
+                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link 
+                to="/login"
+                className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+              >
+                Get Started
+              </Link>
+            )}
           </div>
           
           <button 
@@ -93,19 +116,56 @@ const Navbar = ({ mobileMenuOpen, setMobileMenuOpen }: NavbarProps) => {
               Editor
             </Link>
             <Link 
-              to="/options" 
+              to="/Features" 
               className="text-gray-700 hover:text-purple-600 transition-colors py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Options
+              Features
             </Link>
             <Link 
-              to="/login"
-              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors w-full text-center"
+              to="/help" 
+              className="text-gray-700 hover:text-purple-600 transition-colors py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Get Started
+              Help
             </Link>
+            {isAuthenticated ? (
+              <>
+                <Link 
+                  to="/profile" 
+                  className="text-gray-700 hover:text-purple-600 transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Profile
+                </Link>
+                {user?.email === 'admin@snipx.com' && (
+                  <Link 
+                    to="/admin" 
+                    className="text-gray-700 hover:text-purple-600 transition-colors py-2"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Admin
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors w-full text-center"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link 
+                to="/login"
+                className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors w-full text-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Get Started
+              </Link>
+            )}
           </nav>
         </div>
       )}

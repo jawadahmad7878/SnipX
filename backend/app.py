@@ -12,6 +12,8 @@ from bson import ObjectId
 
 from services.auth_service import AuthService
 from services.video_service import VideoService
+from services.ai_service import AIService
+from services.support_service import SupportService
 
 # Load environment variables
 load_dotenv()
@@ -43,6 +45,8 @@ except Exception as e:
 # Initialize services
 auth_service = AuthService(db)
 video_service = VideoService(db)
+ai_service = AIService()
+support_service = SupportService(db)
 
 # OAuth setup
 oauth = OAuth(app)
@@ -192,6 +196,81 @@ def login():
     except Exception as e:
         logger.exception("Login error")
         return jsonify({'message': str(e)}), 500
+
+@app.route('/api/auth/demo', methods=['POST'])
+def demo_login():
+    try:
+        token, user = auth_service.create_demo_user()
+        return jsonify({'token': token, 'user': user}), 200
+    except Exception as e:
+        logger.exception("Demo login error")
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.get_json()
+        if not data or 'message' not in data:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        message = data['message']
+        conversation_history = data.get('history', [])
+        
+        response = ai_service.get_chatbot_response(message, conversation_history)
+        
+        return jsonify({
+            'response': response,
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+        
+    except Exception as e:
+        logger.exception("Chat error")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/support/tickets', methods=['POST'])
+def create_support_ticket():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        required_fields = ['name', 'email', 'subject', 'description', 'priority', 'type']
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        ticket_id = support_service.create_ticket(data)
+        
+        return jsonify({
+            'message': 'Support ticket created successfully',
+            'ticket_id': ticket_id
+        }), 201
+        
+    except Exception as e:
+        logger.exception("Support ticket creation error")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/support/tickets', methods=['GET'])
+@require_auth
+def get_support_tickets(user_id):
+    try:
+        status = request.args.get('status')
+        tickets = support_service.get_all_tickets(status)
+        return jsonify(tickets), 200
+    except Exception as e:
+        logger.exception("Get support tickets error")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/support/tickets/<ticket_id>', methods=['GET'])
+@require_auth
+def get_support_ticket(user_id, ticket_id):
+    try:
+        ticket = support_service.get_ticket(ticket_id)
+        if not ticket:
+            return jsonify({'error': 'Ticket not found'}), 404
+        return jsonify(ticket), 200
+    except Exception as e:
+        logger.exception("Get support ticket error")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/upload', methods=['POST'])
 @require_auth

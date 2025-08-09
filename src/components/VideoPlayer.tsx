@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings, Captions as ClosedCaptioning } from 'lucide-react';
-import { ApiService, SubtitleData } from '../services/api';
+import { ApiService } from '../services/api';
+
+interface SubtitleData {
+  id: number;
+  start: number;
+  end: number;
+  text: string;
+  language: string;
+  style: string;
+}
 
 interface VideoPlayerProps {
   videoUrl: string;

@@ -377,6 +377,118 @@ def download_video(user_id, video_id):
         logger.error(f"Download error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
+@app.route('/api/videos/<video_id>/subtitles', methods=['GET'])
+@require_auth
+def get_video_subtitles(user_id, video_id):
+    try:
+        video = video_service.get_video(video_id)
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Check if user owns the video
+        if str(video.user_id) != str(user_id):
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        subtitles_info = video.outputs.get('subtitles', {})
+        if not subtitles_info:
+            return jsonify([]), 200
+        
+        # If it's a string (old format), convert to new format
+        if isinstance(subtitles_info, str):
+            return jsonify([]), 200
+        
+        json_path = subtitles_info.get('json')
+        if not json_path or not os.path.exists(json_path):
+            return jsonify([]), 200
+        
+        with open(json_path, 'r', encoding='utf-8') as f:
+            subtitle_data = json.load(f)
+        
+        return jsonify(subtitle_data.get('segments', [])), 200
+        
+    except Exception as e:
+        logger.error(f"Get subtitles error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/videos/<video_id>/subtitles/<language>/download', methods=['GET'])
+@require_auth
+def download_subtitles(user_id, video_id, language):
+    try:
+        video = video_service.get_video(video_id)
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Check if user owns the video
+        if str(video.user_id) != str(user_id):
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        format_type = request.args.get('format', 'srt')
+        subtitles_info = video.outputs.get('subtitles', {})
+        
+        if not subtitles_info:
+            return jsonify({'error': 'No subtitles found'}), 404
+        
+        # If it's a string (old format), try to find the file
+        if isinstance(subtitles_info, str):
+            subtitle_path = subtitles_info
+        else:
+            subtitle_path = subtitles_info.get('srt' if format_type == 'srt' else 'json')
+        
+        if not subtitle_path or not os.path.exists(subtitle_path):
+            return jsonify({'error': 'Subtitle file not found'}), 404
+        
+        filename = f"{video.filename}_{language}.{format_type}"
+        return send_file(
+            subtitle_path,
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"Download subtitles error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/videos/<video_id>/subtitles/generate', methods=['POST'])
+@require_auth
+def generate_subtitles(user_id, video_id):
+    try:
+        video = video_service.get_video(video_id)
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Check if user owns the video
+        if str(video.user_id) != str(user_id):
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        language = data.get('language', 'en')
+        style = data.get('style', 'clean')
+        
+        # Generate subtitles
+        options = {
+            'subtitle_language': language,
+            'subtitle_style': style,
+            'generate_subtitles': True
+        }
+        
+        video_service._generate_subtitles(video, options)
+        
+        # Update video in database
+        video_service.videos.update_one(
+            {"_id": ObjectId(video_id)},
+            {"$set": video.to_dict()}
+        )
+        
+        return jsonify({
+            'message': 'Subtitles generated successfully',
+            'language': language,
+            'style': style
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Generate subtitles error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({'error': 'File too large. Maximum size is 500MB'}), 413

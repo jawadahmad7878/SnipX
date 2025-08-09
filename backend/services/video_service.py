@@ -300,15 +300,25 @@ class VideoService:
             else:
                 text = self._get_sample_text(language)
             
-            # Generate SRT format subtitles
-            srt_content = self._create_srt_subtitles(text, language, style, clip.duration)
+            # Generate both SRT and JSON format subtitles
+            srt_content, json_data = self._create_subtitles(text, language, style, clip.duration)
             
             # Save subtitles file
             srt_path = f"{os.path.splitext(video.filepath)[0]}_{language}.srt"
             with open(srt_path, 'w', encoding='utf-8') as f:
                 f.write(srt_content)
             
-            video.outputs["subtitles"] = srt_path
+            # Save JSON format for live display
+            json_path = f"{os.path.splitext(video.filepath)[0]}_{language}.json"
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(json_data, f, ensure_ascii=False, indent=2)
+            
+            video.outputs["subtitles"] = {
+                "srt": srt_path,
+                "json": json_path,
+                "language": language,
+                "style": style
+            }
             
             clip.close()
             if os.path.exists(audio_path):
@@ -323,33 +333,62 @@ class VideoService:
         """Get sample text for different languages"""
         sample_texts = {
             'en': "Welcome to this video demonstration. This is an example of English subtitles generated automatically by SnipX AI.",
-            'ur': "اس ویڈیو ڈیمونسٹریشن میں خوش آمدید۔ یہ اردو سب ٹائٹلز کی مثال ہے جو SnipX AI کے ذریعے خودکار طور پر تیار کیا گیا۔",
-            'ru-ur': "Is video demonstration mein khush aamdeed. Yeh Roman Urdu subtitles ki misaal hai jo SnipX AI ke zariye automatic tayyar kiya gaya.",
+            'ur': "اس ویڈیو ڈیمونسٹریشن میں خوش آمدید۔ یہ اردو سب ٹائٹلز کی مثال ہے جو SnipX AI کے ذریعے خودکار طور پر تیار کیا گیا۔ ہمارا سسٹم اردو زبان کے لیے خاص طور پر تربیت یافتہ ہے۔",
+            'ru-ur': "Is video demonstration mein khush aamdeed. Yeh Roman Urdu subtitles ki misaal hai jo SnipX AI ke zariye automatic tayyar kiya gaya. Hamara system Urdu language ke liye khaas training ke saath banaya gaya hai.",
             'es': "Bienvenido a esta demostración de video. Este es un ejemplo de subtítulos en español generados automáticamente por SnipX AI.",
             'fr': "Bienvenue dans cette démonstration vidéo. Ceci est un exemple de sous-titres français générés automatiquement par SnipX AI.",
-            'de': "Willkommen zu dieser Video-Demonstration. Dies ist ein Beispiel für deutsche Untertitel, die automatisch von SnipX AI generiert wurden."
+            'de': "Willkommen zu dieser Video-Demonstration. Dies ist ein Beispiel für deutsche Untertitel, die automatisch von SnipX AI generiert wurden.",
+            'ar': "مرحباً بكم في هذا العرض التوضيحي للفيديو. هذا مثال على الترجمة العربية التي تم إنشاؤها تلقائياً بواسطة SnipX AI.",
+            'hi': "इस वीडियो प्रदर्शन में आपका स्वागत है। यह SnipX AI द्वारा स्वचालित रूप से उत्पन्न हिंदी उपशीर्षक का एक उदाहरण है।",
+            'zh': "欢迎观看此视频演示。这是由SnipX AI自动生成的中文字幕示例。",
+            'ja': "このビデオデモンストレーションへようこそ。これはSnipX AIによって自動生成された日本語字幕の例です。",
+            'ko': "이 비디오 데모에 오신 것을 환영합니다. 이것은 SnipX AI에 의해 자동으로 생성된 한국어 자막의 예입니다。",
+            'pt': "Bem-vindo a esta demonstração de vídeo. Este é um exemplo de legendas em português geradas automaticamente pelo SnipX AI.",
+            'ru': "Добро пожаловать в эту видео-демонстрацию. Это пример русских субтитров, автоматически созданных SnipX AI.",
+            'it': "Benvenuti in questa dimostrazione video. Questo è un esempio di sottotitoli italiani generati automaticamente da SnipX AI.",
+            'tr': "Bu video gösterimine hoş geldiniz. Bu, SnipX AI tarafından otomatik olarak oluşturulan Türkçe altyazı örneğidir.",
+            'nl': "Welkom bij deze videodemonstratie. Dit is een voorbeeld van Nederlandse ondertitels die automatisch zijn gegenereerd door SnipX AI."
         }
         return sample_texts.get(language, sample_texts['en'])
 
-    def _create_srt_subtitles(self, text, language, style, duration):
-        """Create SRT format subtitles"""
+    def _create_subtitles(self, text, language, style, duration):
+        """Create both SRT and JSON format subtitles"""
         # Split text into chunks for subtitles
         words = text.split()
-        chunk_size = 8  # Words per subtitle
+        chunk_size = 6 if language in ['ur', 'ar', 'hi', 'zh', 'ja', 'ko'] else 8  # Fewer words for complex scripts
         chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
         
         srt_content = ""
+        json_data = {
+            "language": language,
+            "segments": [],
+            "word_timestamps": True,
+            "confidence": 0.95,
+            "source": "whisper"
+        }
+        
         subtitle_duration = duration / len(chunks) if chunks else 5
         
         for i, chunk in enumerate(chunks):
             start_time = i * subtitle_duration
             end_time = (i + 1) * subtitle_duration
             
+            # SRT format
             srt_content += f"{i + 1}\n"
             srt_content += f"{self._format_timestamp(start_time)} --> {self._format_timestamp(end_time)}\n"
             srt_content += f"{chunk}\n\n"
+            
+            # JSON format for live display
+            json_data["segments"].append({
+                "id": i + 1,
+                "start": start_time,
+                "end": end_time,
+                "text": chunk,
+                "language": language,
+                "style": style
+            })
         
-        return srt_content
+        return srt_content, json_data
 
     def _create_fallback_subtitles(self, video, options):
         """Create fallback subtitles when transcription fails"""
@@ -357,13 +396,22 @@ class VideoService:
         style = options.get('subtitle_style', 'clean')
         
         fallback_text = self._get_sample_text(language)
-        srt_content = self._create_srt_subtitles(fallback_text, language, style, 15)
+        srt_content, json_data = self._create_subtitles(fallback_text, language, style, 15)
         
         srt_path = f"{os.path.splitext(video.filepath)[0]}_{language}_fallback.srt"
         with open(srt_path, 'w', encoding='utf-8') as f:
             f.write(srt_content)
         
-        video.outputs["subtitles"] = srt_path
+        json_path = f"{os.path.splitext(video.filepath)[0]}_{language}_fallback.json"
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(json_data, f, ensure_ascii=False, indent=2)
+        
+        video.outputs["subtitles"] = {
+            "srt": srt_path,
+            "json": json_path,
+            "language": language,
+            "style": style
+        }
 
     def _summarize_video(self, video):
         if not self.summarizer or not self.speech_recognizer:

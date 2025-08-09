@@ -182,6 +182,17 @@ export class ApiService {
     return this.request(`/videos/${videoId}/subtitles`);
   }
 
+  // Generate subtitles for a video
+  static async generateSubtitles(videoId: string, options: {
+    language: string;
+    style: string;
+  }) {
+    return this.request(`/videos/${videoId}/subtitles/generate`, {
+      method: 'POST',
+      body: JSON.stringify(options)
+    });
+  }
+
   // Profile management
   static async getUserProfile() {
     return this.request('/profile');

@@ -16,3 +16,5 @@ torch==2.5.1
 openai-whisper==20231117
 SpeechRecognition==3.10.0
 PyAudio==0.2.11
+whisper==1.1.10
+openai-whisper==20231117

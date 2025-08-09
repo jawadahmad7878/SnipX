@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, VolumeX, Volume2, Upload, Video, X, UploadCloud as CloudUpload, Smile, Scissors, Trash2, Undo2, Music, Type, Save, Expand, Magnet as Magic, Brain, Share2 } from 'lucide-react';
+import SubtitleEditor from './SubtitleEditor';
 
 interface VideoEditorProps {
   videoUrl?: string;
@@ -12,9 +13,11 @@ const VideoEditor = ({ videoUrl }: VideoEditorProps) => {
   const [duration, setDuration] = useState(100);
   const [activeTab, setActiveTab] = useState('cutting');
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [showSubtitleEditor, setShowSubtitleEditor] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,10 +227,28 @@ const VideoEditor = ({ videoUrl }: VideoEditorProps) => {
                 <label className="block text-xs text-gray-600">Language</label>
                 <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
                   <option>English</option>
+                  <option>Urdu (اردو)</option>
+                  <option>Roman Urdu</option>
+                  <option>Arabic (العربية)</option>
+                  <option>Hindi (हिंदी)</option>
                   <option>Spanish</option>
                   <option>French</option>
                   <option>German</option>
+                  <option>Chinese (中文)</option>
                   <option>Japanese</option>
+                  <option>Korean (한국어)</option>
+                  <option>Portuguese</option>
+                  <option>Russian (Русский)</option>
+                  <option>Italian</option>
+                  <option>Turkish</option>
+                  <option>Dutch</option>
+                </select>
+                <label className="block text-xs text-gray-600 mt-2">Style</label>
+                <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
+                  <option value="clean">Clean</option>
+                  <option value="casual">Casual</option>
+                  <option value="formal">Formal</option>
+                  <option value="creative">Creative</option>
                 </select>
               </div>
             </div>
@@ -397,10 +418,28 @@ const VideoEditor = ({ videoUrl }: VideoEditorProps) => {
                 <Save className="mr-1" size={16} />
                 Save Project
               </button>
+              <button 
+                onClick={() => setShowSubtitleEditor(true)}
+                className="px-3 py-1 bg-purple-200 hover:bg-purple-300 text-purple-700 rounded-md text-sm flex items-center"
+              >
+                <Type className="mr-1" size={16} />
+                Edit Subtitles
+              </button>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Subtitle Editor Modal */}
+      {showSubtitleEditor && videoId && (
+        <SubtitleEditor
+          videoId={videoId}
+          onClose={() => setShowSubtitleEditor(false)}
+          onSubtitlesUpdate={(subtitles) => {
+            console.log('Subtitles updated:', subtitles);
+          }}
+        />
+      )}
     </div>
   );
 };
